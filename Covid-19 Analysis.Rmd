@@ -1,0 +1,115 @@
+---
+title: "Covid-19"
+author: "Iris Liu"
+date: "11/23/2020"
+output: html_document
+---
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+library(tti)
+library(dplyr)
+library(plotly)
+library(tidyverse)
+library(listviewer)
+schema(jsonedit = interactive())
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+dqc <- get_dqc_equilibrium(init = c(Ds = 0, Da = 0, Qcds = 0, Qhds = 0,
+                                    Qcda = 0, Qhda = 0, Qq = 0, Cs = 0.8,
+                                    Ca = 0.2))
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+get_prop_quarantined(dqc)
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+get_r_effective(dqc)
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+d <- get_proportions_df(duration = 10)
+
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+library(ggplot2)
+ggplot(d, aes(x = t, y = prop_infected, color = category)) + 
+  geom_line() + 
+  scale_y_continuous("Proportion of Infected")
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+library(dplyr)
+r <- d %>%
+  distinct(t, r_effective)
+r
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+ggplot(r, aes(x = t, y = r_effective)) +
+  geom_line() +
+  scale_y_continuous("Effective R")
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+d <- get_r_effective_df(t_ds = 1:14, 
+                        rho_s = c(0.05, 0.25, 0.5))
+d
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+ggplot(d, aes(x = t_ds, y = r_effective, color = factor(rho_s))) +
+  geom_line() + 
+  scale_y_continuous("Effective R") + 
+  scale_x_continuous("Delay (symptomatic case detection and isolation)") + 
+  scale_color_discrete("P(detected |  symptomatic)")
+```
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+grid <- expand.grid(
+  alpha = 0.2,
+  R = 2.5,
+  kappa = 0.5,
+  eta = 0.5,
+  nu = 4,
+  t_ds = 1:14,
+  t_qcs = 1,
+  t_qca = 1,
+  t_qhs = 1,
+  t_qha = 1,
+  t_q = 1,
+  omega_c = 0.5,
+  omega_h = 0.5,
+  omega_q = 0.5,
+  rho_s = seq(0, 1, 0.1),
+  rho_a = 1,
+  offset = - 2.31,
+  shape = 1.65,
+  rate = 0.5,
+  quarantine_days = Inf
+)
+```
+```{r}
+grid <- grid %>%
+  mutate(
+    rho_a = pmin(rho_s * 0.5, 1),
+    t_da = t_ds,
+    t_qcs = t_ds,
+    t_qca = t_ds,
+    t_qhs = t_ds,
+    t_qha = t_ds,
+    t_q = t_ds
+  )
+```
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+d <- pmap_df(grid, tti:::get_r_effective_df_one)
+```
+
+
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+plot_ly(x = d$rho_s, y = d$t_ds, z = d$r_effective, type = 'mesh3d')
+```
+
+
